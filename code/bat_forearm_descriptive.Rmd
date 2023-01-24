@@ -1,0 +1,217 @@
+---
+title: "Bat forearm length"
+author: "Deon Roos"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: flatly
+    highlight: monochrome
+    code_folding: hide
+    toc: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    df_round1_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mgcv)
+library(ggplot2)
+library(ggmap)
+library(patchwork)
+library(tidyverse)
+```
+
+# Summary
+
+[Placeholder] This work seeks to describe the influence of habitat on forearm length of Serotine bats.
+
+# Packages
+
+```{r}
+library(mgcv)       # For non-linear relationships
+library(ggplot2)    # For data visulations
+library(ggmap)      # For satelitte imagery
+library(patchwork)  # For plotting gg objects together
+library(tidyverse)  # For generic data manipulation methods (used sparingly)
+```
+
+```{r, include = FALSE}
+register_google(key = "AIzaSyDZKT-rGxUv21PxNFO4elG-n4m31gOqn_M") # key to access google api - do not share
+```
+
+# Data
+
+```{r}
+df <- read.csv("C:\\014_batForearmLength\\data\\bat_afl.csv", header = TRUE)
+```
+
+The data contains `r nrow(df)` observations from `r min(df$Year)` to `r max(df$Year)` from a total of `r length(unique(df$Site))` roost locations.
+
+## Visual descriptions
+
+> Comments on data visulations: In all, there doesn't seem to be an awful lot of signal coming out from the raw data alone. The most striking relationship seems to be across years, with variation seemingly increasing and decreasing (though mean seems relatively constant). Some suggestion of rounding up or down (see histogram, with bins of 0.25 mm), which would dampen any subtle influences on forearm length.
+
+### Forearm Distribution
+
+```{r}
+ggplot(df) +
+  geom_histogram(aes(x = AFL), colour = "white", binwidth = 0.25) +
+  labs(x = "Forearm length",
+       y = "Frequency") +
+  theme_classic()
+```
+
+### Site locations
+
+```{r}
+lon_bar <- (min(df$lon, na.rm = TRUE) + max(df$lon, na.rm = TRUE))/2
+lat_bar <- (min(df$lat, na.rm = TRUE) + max(df$lat, na.rm = TRUE))/2
+
+bat_roosts <- get_map(location = c(lon_bar, lat_bar), 
+                      zoom = 7, 
+                      maptype = "satellite", 
+                      source = "google", 
+                      messaging = FALSE)
+
+ggmap(bat_roosts) +
+  geom_point(data = df, aes(x = lon, y = lat),
+             size = 2.5, pch = 21, fill = "black", colour = "white") +
+  labs(x = "Longitude",
+       y = "Latitude",
+       fill = "Estate") +
+  theme_classic()
+```
+
+### Sites in space-time
+
+```{r}
+ggmap(bat_roosts) +
+  geom_point(data = df, aes(x = lon, y = lat),
+             pch = 21, fill = "black", colour = "white") +
+  labs(x = "Longitude",
+       y = "Latitude",
+       fill = "Forearm\nLength") +
+  theme_classic() +
+  facet_wrap(~Year)
+```
+
+### Forearm ~ Year
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = Year)) +
+  labs(y = "Forearm length",
+       x = "Year") +
+  theme_classic()
+```
+
+### Forearm ~ mean July temperature
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = july.mean)) +
+  labs(y = "Forearm length",
+       x = "Mean July temperature") +
+  theme_classic()
+```
+
+### Forearm ~ max July temperature
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = july.max)) +
+  labs(y = "Forearm length",
+       x = "Max July temperature") +
+  theme_classic()
+```
+
+### Forearm ~ Genetics
+
+```{r}
+ggplot(df) +
+  geom_boxplot(aes(y = AFL, x = factor(genetics))) +
+  labs(y = "Forearm length",
+       x = "Genetics") +
+  theme_classic()
+```
+
+### Forearm ~ Roost
+
+```{r}
+ggplot(df) +
+  geom_boxplot(aes(y = AFL, x = factor(Site))) +
+  labs(y = "Forearm length",
+       x = "Roost") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+### Forearm ~ Altitude
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = alt)) +
+  labs(y = "Forearm length",
+       x = "Altitude") +
+  theme_classic()
+```
+
+### Forearm ~ Short grass area
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = short.grass.area)) +
+  labs(y = "Forearm length",
+       x = "Area of short grass") +
+  theme_classic()
+```
+
+### Forearm ~ Woodland area
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = woodland.area)) +
+  labs(y = "Forearm length",
+       x = "Area of woodland") +
+  theme_classic()
+```
+
+### Forearm ~ Urban area
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = urban.area)) +
+  labs(y = "Forearm length",
+       x = "Area of urban") +
+  theme_classic()
+```
+
+### Forearm ~ Roost size (est)
+
+```{r}
+ggplot(df) +
+  geom_point(aes(y = AFL, x = roost_size)) +
+  labs(y = "Forearm length",
+       x = "Estimated population of roost",
+       caption = "Note 93 observations lack an estimate of population size") +
+  theme_classic()
+```
+
+# Descriptive analysis
+
+The model below is intended to be for descriptive purposes only and includes only space and time. This crude model would suggest that in some parts of the sampling area, forearm length was at times 8 mm above average, and at others -4 mm below average.
+
+```{r}
+m1 <- gam(AFL ~ te(lon, lat, Year, k = c(8, 8, 8), bs = "cr"),
+          data = df,
+          method = "REML"
+)
+
+gam.check(m1)
+summary(m1)
+plot(m1, scheme = 2, ask = FALSE)
+```
+
